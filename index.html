@@ -1,0 +1,1056 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FinWise AI - Smart Budget Calculator & Expense Tracker</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0fdf4',
+                            400: '#4ade80',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            700: '#15803d',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: radial-gradient(circle at top right, #1e1b4b 0%, #0f172a 45%, #020617 100%);
+            min-height: 100vh;
+            color: #f8fafc;
+        }
+
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.6);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+
+        .modal-backdrop {
+            background: rgba(2, 6, 23, 0.85);
+            backdrop-filter: blur(6px);
+        }
+
+        .glow-emerald {
+            box-shadow: 0 0 20px -5px rgba(34, 197, 94, 0.35);
+        }
+    </style>
+</head>
+<body class="text-slate-100 antialiased flex flex-col min-h-screen">
+
+    <!-- Top Navigation Header -->
+    <header class="glass-panel sticky top-0 z-40 border-b border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="bg-gradient-to-tr from-brand-600 to-emerald-400 text-white p-2.5 rounded-xl shadow-lg glow-emerald">
+                    <i class="fa-solid fa-brain text-xl"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h1 class="font-bold text-white text-lg tracking-tight">FinWise AI</h1>
+                        <span id="health-badge" class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                            On Track
+                        </span>
+                    </div>
+                    <p class="text-xs text-slate-400">Autonomous Budget Calculator & Agent</p>
+                </div>
+            </div>
+
+            <!-- Global Action Toolbar -->
+            <div class="flex items-center gap-2">
+                <button onclick="triggerEditTarget()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-brand-400 font-semibold py-2 px-3 rounded-xl text-xs transition-all flex items-center gap-1.5">
+                    <i class="fa-solid fa-pen-to-square"></i> <span class="hidden sm:inline">Set Target</span>
+                </button>
+                <button onclick="loadSampleData()" class="bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 font-semibold py-2 px-3 rounded-xl text-xs transition-all flex items-center gap-1.5">
+                    <i class="fa-solid fa-database"></i> <span class="hidden sm:inline">Sample Data</span>
+                </button>
+                <button onclick="clearAllData()" class="bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-400 font-semibold py-2 px-3 rounded-xl text-xs transition-all flex items-center gap-1.5">
+                    <i class="fa-solid fa-trash-can"></i> <span>Clear All</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main App Container -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+        <!-- Top Metrics Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+            <!-- Metric 1: Total Spent -->
+            <div class="glass-panel p-5 rounded-2xl relative overflow-hidden group">
+                <div class="flex items-center justify-between text-slate-400 mb-2">
+                    <span class="text-xs font-bold uppercase tracking-wider">Total Spent</span>
+                    <span class="p-2 bg-blue-500/10 text-blue-400 rounded-xl border border-blue-500/20"><i class="fa-solid fa-wallet text-sm"></i></span>
+                </div>
+                <div id="metric-total-spent" class="text-3xl font-black text-white tracking-tight">$0.00</div>
+                <div id="metric-tx-count" class="text-xs text-slate-400 font-medium mt-1">0 transactions logged</div>
+            </div>
+
+            <!-- Metric 2: Forecast -->
+            <div class="glass-panel p-5 rounded-2xl relative overflow-hidden group">
+                <div class="flex items-center justify-between text-slate-400 mb-2">
+                    <span class="text-xs font-bold uppercase tracking-wider">Next Month Forecast</span>
+                    <span class="p-2 bg-purple-500/10 text-purple-400 rounded-xl border border-purple-500/20"><i class="fa-solid fa-chart-line text-sm"></i></span>
+                </div>
+                <div id="metric-forecast-total" class="text-3xl font-black text-white tracking-tight">$0.00</div>
+                <div class="text-xs text-slate-400 font-medium mt-1">Weighted: 40% avg, 60% latest</div>
+            </div>
+
+            <!-- Metric 3: Target Budget -->
+            <div class="glass-panel p-5 rounded-2xl relative overflow-hidden group border border-brand-500/30">
+                <div class="flex items-center justify-between text-slate-400 mb-2">
+                    <span class="text-xs font-bold uppercase tracking-wider">Target Budget</span>
+                    <button onclick="triggerEditTarget()" class="text-xs text-brand-400 hover:underline font-semibold flex items-center gap-1 bg-brand-500/10 px-2 py-1 rounded-lg border border-brand-500/20">
+                        <i class="fa-solid fa-pen text-[10px]"></i> Edit Target
+                    </button>
+                </div>
+                <div id="metric-target-budget" class="text-3xl font-black text-white tracking-tight">$1,500.00</div>
+                <div id="metric-target-status" class="text-xs font-semibold mt-1 text-slate-400">
+                    --
+                </div>
+            </div>
+        </div>
+
+        <!-- Budget Usage Target Progress Bar -->
+        <div class="glass-panel p-5 rounded-2xl">
+            <div class="flex justify-between items-center mb-2">
+                <span class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+                    <i class="fa-solid fa-bullseye text-brand-400"></i> Budget Consumption Meter
+                </span>
+                <span id="target-progress-percent" class="text-sm font-extrabold text-brand-400">0%</span>
+            </div>
+            <div class="w-full bg-slate-950 rounded-full h-3 overflow-hidden border border-slate-800 p-0.5">
+                <div id="target-progress-bar" class="bg-gradient-to-r from-brand-500 to-emerald-400 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+            </div>
+        </div>
+
+        <!-- Upper Row: AI Agent Chat & Expense Form -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            <!-- AI Agent Chat Interface (7 Columns) -->
+            <section class="lg:col-span-7 glass-panel rounded-2xl flex flex-col h-[520px] shadow-2xl relative overflow-hidden">
+                <div class="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/60">
+                    <div class="flex items-center gap-3">
+                        <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-600 to-emerald-400 flex items-center justify-center text-white text-sm font-bold shadow-md">
+                            <i class="fa-solid fa-robot"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-sm font-bold text-white">AI Financial Assistant</h2>
+                            <p class="text-[11px] text-slate-400">Type natural language queries or use quick shortcuts</p>
+                        </div>
+                    </div>
+                    <button onclick="resetChatMessages()" class="text-xs text-slate-400 hover:text-slate-200 p-1.5 hover:bg-slate-800 rounded-lg">
+                        <i class="fa-solid fa-rotate-right mr-1"></i> Reset Agent
+                    </button>
+                </div>
+
+                <!-- Chat Feed -->
+                <div id="chat-messages" class="flex-1 p-4 overflow-y-auto space-y-3.5 bg-slate-950/40">
+                    <!-- Dynamic Messages -->
+                </div>
+
+                <!-- Quick Action Buttons -->
+                <div class="p-2.5 border-t border-slate-800/80 bg-slate-900/80 flex flex-wrap gap-2">
+                    <button onclick="handleQuickAction('save')" class="text-xs bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 font-medium py-1.5 px-3 rounded-xl border border-indigo-500/20">
+                        💡 Where can I save?
+                    </button>
+                    <button onclick="handleQuickAction('forecast')" class="text-xs bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 font-medium py-1.5 px-3 rounded-xl border border-purple-500/20">
+                        📊 Forecast next month
+                    </button>
+                    <button onclick="handleQuickAction('swiggy')" class="text-xs bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 font-medium py-1.5 px-3 rounded-xl border border-amber-500/20">
+                        🍔 Add 450 Swiggy dinner
+                    </button>
+                    <button onclick="handleQuickAction('sample')" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium py-1.5 px-3 rounded-xl border border-slate-700">
+                        ⚡ Load sample data
+                    </button>
+                </div>
+
+                <!-- Chat Form -->
+                <form id="chat-form" onsubmit="handleChatSubmit(event)" class="p-3 border-t border-slate-800 bg-slate-900 flex items-center gap-2">
+                    <input 
+                        type="text" 
+                        id="chat-input" 
+                        placeholder="e.g. 'I paid 1200 for rent today' or 'Where can I save?'" 
+                        class="flex-1 px-4 py-2.5 text-sm bg-slate-950 border border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500 text-white placeholder:text-slate-500"
+                        autocomplete="off"
+                    >
+                    <button type="submit" class="bg-brand-600 hover:bg-brand-500 text-white font-semibold px-5 py-2.5 rounded-xl text-sm transition-all shadow-md flex items-center gap-2 shrink-0">
+                        <span>Send</span>
+                        <i class="fa-solid fa-paper-plane text-xs"></i>
+                    </button>
+                </form>
+            </section>
+
+            <!-- Add Expense Form (5 Columns) -->
+            <section class="lg:col-span-5 glass-panel p-5 rounded-2xl flex flex-col justify-between shadow-2xl border border-slate-800">
+                <div>
+                    <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
+                        <h2 class="text-base font-bold text-white flex items-center gap-2">
+                            <i class="fa-solid fa-circle-plus text-brand-400"></i> Add Expense
+                        </h2>
+                        <span class="text-[11px] text-slate-400 bg-slate-800 px-2.5 py-1 rounded-lg">Manual Form</span>
+                    </div>
+
+                    <form id="expense-form" onsubmit="handleManualExpenseSubmit(event)" class="space-y-3.5">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Description</label>
+                            <input 
+                                type="text" 
+                                id="exp-desc" 
+                                placeholder="e.g. Netflix, Walmart, Rent, Uber" 
+                                required
+                                class="w-full px-3.5 py-2 text-sm bg-slate-950 border border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500 text-white"
+                            >
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Amount ($)</label>
+                                <input 
+                                    type="number" 
+                                    step="0.01" 
+                                    min="0.01" 
+                                    id="exp-amount" 
+                                    placeholder="0.00" 
+                                    required
+                                    class="w-full px-3.5 py-2 text-sm bg-slate-950 border border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500 text-white"
+                                >
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Date</label>
+                                <input 
+                                    type="date" 
+                                    id="exp-date" 
+                                    required
+                                    class="w-full px-3.5 py-2 text-sm bg-slate-950 border border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500 text-white"
+                                >
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Category</label>
+                            <select id="exp-category" class="w-full px-3.5 py-2 text-sm bg-slate-950 border border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500 text-white">
+                                <option value="Rent/Housing">Rent/Housing</option>
+                                <option value="Groceries">Groceries</option>
+                                <option value="Utilities">Utilities</option>
+                                <option value="Dining & Food">Dining & Food</option>
+                                <option value="Transport">Transport</option>
+                                <option value="Subscriptions">Subscriptions</option>
+                                <option value="Entertainment">Entertainment</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+
+                        <div class="flex items-center gap-2 pt-1">
+                            <input type="checkbox" id="exp-recurring" class="w-4 h-4 text-brand-500 rounded border-slate-700 accent-brand-500 bg-slate-950">
+                            <label for="exp-recurring" class="text-xs font-semibold text-slate-300 cursor-pointer select-none">
+                                Recurring monthly bill
+                            </label>
+                        </div>
+
+                        <div class="flex items-center gap-2 pt-2">
+                            <button type="submit" class="flex-1 bg-brand-600 hover:bg-brand-500 text-white font-bold py-2.5 px-4 rounded-xl text-sm transition-all shadow-lg glow-emerald">
+                                Add Expense
+                            </button>
+                            <button type="button" onclick="clearAllData()" class="bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 font-semibold py-2.5 px-3 rounded-xl text-sm border border-rose-500/20 transition-all">
+                                Clear All
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <div id="form-notification" class="mt-3 text-xs font-bold text-emerald-400 hidden flex items-center gap-1.5 bg-emerald-500/10 p-2.5 rounded-xl border border-emerald-500/20">
+                    <i class="fa-solid fa-circle-check"></i> <span id="notification-text">Saved!</span>
+                </div>
+            </section>
+        </div>
+
+        <!-- Visual Analytics Section -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <div class="lg:col-span-8 glass-panel p-5 rounded-2xl border border-slate-800 shadow-2xl">
+                <div class="flex items-center justify-between mb-4 pb-2 border-b border-slate-800">
+                    <div>
+                        <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                            <i class="fa-solid fa-chart-column text-blue-400"></i> Category Spending vs Forecast
+                        </h3>
+                    </div>
+                </div>
+                <div class="h-64 w-full">
+                    <canvas id="categoryChart"></canvas>
+                </div>
+            </div>
+
+            <div class="lg:col-span-4 glass-panel p-5 rounded-2xl border border-slate-800 shadow-2xl flex flex-col justify-between">
+                <div>
+                    <h3 class="text-sm font-bold text-white mb-3 pb-2 border-b border-slate-800 flex items-center gap-2">
+                        <i class="fa-solid fa-chart-pie text-purple-400"></i> Category Share
+                    </h3>
+                    <div class="h-44 w-full relative flex items-center justify-center">
+                        <canvas id="donutChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="mt-3 pt-3 border-t border-slate-800">
+                    <h4 class="text-xs font-bold text-amber-400 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                        <i class="fa-solid fa-lightbulb"></i> Savings Insight
+                    </h4>
+                    <p id="savings-insight-text" class="text-xs text-slate-300 leading-relaxed bg-amber-500/10 p-3 rounded-xl border border-amber-500/20">
+                        Analyzing expenses...
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Breakdown Lists -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="glass-panel p-5 rounded-2xl border border-slate-800">
+                <h3 class="text-sm font-bold text-white mb-3 pb-2 border-b border-slate-800 flex items-center gap-2">
+                    <i class="fa-solid fa-layer-group text-emerald-400"></i> Actual Expenditure
+                </h3>
+                <div id="spending-category-list" class="space-y-3 max-h-56 overflow-y-auto pr-1"></div>
+            </div>
+
+            <div class="glass-panel p-5 rounded-2xl border border-slate-800">
+                <h3 class="text-sm font-bold text-white mb-3 pb-2 border-b border-slate-800 flex items-center gap-2">
+                    <i class="fa-solid fa-wand-magic-sparkles text-indigo-400"></i> Forecasted Breakdown
+                </h3>
+                <div id="forecast-category-list" class="space-y-3 max-h-56 overflow-y-auto pr-1"></div>
+            </div>
+
+            <div class="glass-panel p-5 rounded-2xl border border-slate-800">
+                <h3 class="text-sm font-bold text-white mb-3 pb-2 border-b border-slate-800 flex items-center gap-2">
+                    <i class="fa-solid fa-arrows-rotate text-cyan-400"></i> Recurring Charges
+                </h3>
+                <div id="recurring-charges-list" class="space-y-2.5 max-h-56 overflow-y-auto pr-1"></div>
+            </div>
+        </div>
+
+        <!-- Transactions History Table -->
+        <section class="glass-panel rounded-2xl border border-slate-800 shadow-2xl overflow-hidden mb-8">
+            <div class="p-5 border-b border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-900/50">
+                <div>
+                    <h2 class="text-base font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-list-check text-brand-400"></i> Transactions
+                    </h2>
+                    <p class="text-xs text-slate-400">Filter, search or delete expenses in real-time</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <input 
+                        type="text" 
+                        id="table-search" 
+                        oninput="renderTransactionsTable()" 
+                        placeholder="Search logs..." 
+                        class="px-3 py-1.5 text-xs bg-slate-950 border border-slate-800 rounded-xl focus:outline-none focus:ring-1 focus:ring-brand-500 text-white"
+                    >
+                    <span id="transaction-count-badge" class="bg-slate-800 text-slate-300 text-xs px-3 py-1.5 rounded-xl font-bold border border-slate-700 shrink-0">
+                        0 Transactions
+                    </span>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-950/80 border-b border-slate-800 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                            <th class="py-3 px-4">Date</th>
+                            <th class="py-3 px-4">Description</th>
+                            <th class="py-3 px-4">Category</th>
+                            <th class="py-3 px-4 text-right">Amount</th>
+                            <th class="py-3 px-4 text-center w-20">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="transactions-table-body" class="divide-y divide-slate-800/60 text-sm text-slate-200">
+                        <!-- Dynamic Rows -->
+                    </tbody>
+                </table>
+                <div id="empty-state" class="p-8 text-center hidden">
+                    <i class="fa-solid fa-folder-open text-3xl text-slate-600 mb-2"></i>
+                    <p class="text-sm font-medium text-slate-400">No transactions found.</p>
+                    <button onclick="loadSampleData()" class="mt-2 text-xs text-brand-400 font-bold hover:underline">Click to load benchmark data</button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Modal for Editing Target Budget -->
+    <div id="target-modal" class="fixed inset-0 z-50 modal-backdrop flex items-center justify-center hidden p-4">
+        <div class="glass-panel p-6 rounded-2xl max-w-sm w-full border border-slate-700 shadow-2xl">
+            <div class="flex items-center justify-between mb-4 pb-2 border-b border-slate-800">
+                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-bullseye text-brand-400"></i> Set Monthly Target
+                </h3>
+                <button onclick="closeTargetModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <p class="text-xs text-slate-400 mb-4">Set your monthly budget limit. Updates calculation meters immediately.</p>
+            
+            <form onsubmit="handleTargetFormSubmit(event)">
+                <div class="mb-4">
+                    <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Target Limit ($)</label>
+                    <input 
+                        type="number" 
+                        step="10" 
+                        min="1" 
+                        id="target-modal-input" 
+                        class="w-full px-4 py-2 text-base bg-slate-950 border border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500 text-white font-bold"
+                        required
+                    >
+                </div>
+                <div class="flex items-center justify-end gap-2">
+                    <button type="button" onclick="closeTargetModal()" class="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-white bg-slate-800 rounded-xl">Cancel</button>
+                    <button type="submit" class="px-4 py-2 text-xs font-bold text-white bg-brand-600 hover:bg-brand-500 rounded-xl shadow-lg glow-emerald">Save Target</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Application Script -->
+    <script>
+        // Application State
+        let targetBudget = 1500;
+        let transactions = [];
+
+        // Preloaded Benchmarks
+        const SAMPLE_BENCHMARKS = [
+            { id: 101, date: '2026-10-01', description: 'Apartment Rent', category: 'Rent/Housing', amount: 1200.00, isRecurring: true },
+            { id: 102, date: '2026-10-02', description: 'Electricity & Power', category: 'Utilities', amount: 92.00, isRecurring: true },
+            { id: 103, date: '2026-10-05', description: 'Weekly Groceries', category: 'Groceries', amount: 240.00, isRecurring: false },
+            { id: 104, date: '2026-10-08', description: 'Netflix Subscription', category: 'Subscriptions', amount: 15.99, isRecurring: true },
+            { id: 105, date: '2026-10-12', description: 'Uber Transport', category: 'Transport', amount: 32.00, isRecurring: false },
+            { id: 106, date: '2026-10-18', description: 'Swiggy Dinner', category: 'Dining & Food', amount: 18.50, isRecurring: false }
+        ];
+
+        // Category Styles Configuration
+        const categoryConfig = {
+            'Rent/Housing': { bg: 'bg-indigo-500', hex: '#6366f1', badge: 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20' },
+            'Groceries': { bg: 'bg-emerald-500', hex: '#10b981', badge: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' },
+            'Utilities': { bg: 'bg-amber-500', hex: '#f59e0b', badge: 'bg-amber-500/10 text-amber-400 border border-amber-500/20' },
+            'Dining & Food': { bg: 'bg-rose-500', hex: '#f43f5e', badge: 'bg-rose-500/10 text-rose-400 border border-rose-500/20' },
+            'Transport': { bg: 'bg-sky-500', hex: '#0ea5e9', badge: 'bg-sky-500/10 text-sky-400 border border-sky-500/20' },
+            'Subscriptions': { bg: 'bg-purple-500', hex: '#a855f7', badge: 'bg-purple-500/10 text-purple-400 border border-purple-500/20' },
+            'Entertainment': { bg: 'bg-fuchsia-500', hex: '#d946ef', badge: 'bg-fuchsia-500/10 text-fuchsia-400 border border-fuchsia-500/20' },
+            'Other': { bg: 'bg-slate-500', hex: '#64748b', badge: 'bg-slate-500/10 text-slate-400 border border-slate-500/20' }
+        };
+
+        // Chart References
+        let barChartInstance = null;
+        let donutChartInstance = null;
+
+        // Initialization
+        window.onload = function() {
+            document.getElementById('exp-date').value = new Date().toISOString().split('T')[0];
+            loadState();
+            addAgentMessage(`Hello! I'm your AI Budget Assistant. I can log expenses, forecast next month's total, and answer questions like *"Where can I save?"*`);
+        };
+
+        // State Persistence
+        function saveState() {
+            localStorage.setItem('finwise_app_transactions', JSON.stringify(transactions));
+            localStorage.setItem('finwise_app_target', targetBudget.toString());
+        }
+
+        function loadState() {
+            const savedTxs = localStorage.getItem('finwise_app_transactions');
+            const savedTarget = localStorage.getItem('finwise_app_target');
+
+            if (savedTarget && !isNaN(parseFloat(savedTarget))) {
+                targetBudget = parseFloat(savedTarget);
+            }
+
+            if (savedTxs) {
+                try {
+                    transactions = JSON.parse(savedTxs);
+                } catch(e) {
+                    transactions = [...SAMPLE_BENCHMARKS];
+                }
+            } else {
+                transactions = [...SAMPLE_BENCHMARKS];
+            }
+
+            updateDashboard();
+        }
+
+        // Feature 1: Fix Target Edit Functionality
+        function triggerEditTarget() {
+            document.getElementById('target-modal-input').value = targetBudget;
+            document.getElementById('target-modal').classList.remove('hidden');
+        }
+
+        function closeTargetModal() {
+            document.getElementById('target-modal').classList.add('hidden');
+        }
+
+        function handleTargetFormSubmit(e) {
+            e.preventDefault();
+            const inputVal = parseFloat(document.getElementById('target-modal-input').value);
+            if (!isNaN(inputVal) && inputVal > 0) {
+                targetBudget = inputVal;
+                saveState();
+                updateDashboard();
+                closeTargetModal();
+                showNotification(`Monthly target updated to ${formatCurrency(targetBudget)}`);
+                addAgentMessage(`Target monthly budget updated to **${formatCurrency(targetBudget)}**.`);
+            }
+        }
+
+        // Feature 2: Fix Clear All Functionality
+        function clearAllData() {
+            if (confirm("Are you sure you want to clear all expenses and reset state?")) {
+                transactions = [];
+                localStorage.removeItem('finwise_app_transactions');
+                saveState();
+                updateDashboard();
+                showNotification("All transactions cleared.");
+                resetChatMessages();
+                addAgentMessage("All expense records have been cleared.");
+            }
+        }
+
+        // Feature 3: Fix Delete/Remove Expense Functionality
+        function deleteExpenseItem(id) {
+            transactions = transactions.filter(t => t.id !== id);
+            saveState();
+            updateDashboard();
+            showNotification("Expense deleted.");
+        }
+
+        // Sample Data Handler
+        function loadSampleData() {
+            transactions = JSON.parse(JSON.stringify(SAMPLE_BENCHMARKS));
+            targetBudget = 1500;
+            saveState();
+            updateDashboard();
+            showNotification("Sample benchmark data loaded!");
+            addAgentMessage("Loaded sample financial benchmark data.");
+        }
+
+        // Currency Formatter
+        function formatCurrency(num) {
+            return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(num);
+        }
+
+        // Main Dashboard Render Loop
+        function updateDashboard() {
+            // 1. Total Spent
+            const totalSpent = transactions.reduce((sum, item) => sum + item.amount, 0);
+            document.getElementById('metric-total-spent').innerText = formatCurrency(totalSpent);
+            document.getElementById('metric-tx-count').innerText = `${transactions.length} transaction${transactions.length === 1 ? '' : 's'} logged`;
+
+            // 2. Aggregate Categories
+            const catTotals = {};
+            const catRecurring = {};
+
+            transactions.forEach(t => {
+                catTotals[t.category] = (catTotals[t.category] || 0) + t.amount;
+                if (t.isRecurring) {
+                    catRecurring[t.category] = Math.max(catRecurring[t.category] || 0, t.amount);
+                }
+            });
+
+            // 3. Forecast Algorithm (40% avg + 60% recurring)
+            let forecastTotal = 0;
+            const catForecasts = {};
+            const categories = Object.keys(categoryConfig);
+
+            categories.forEach(cat => {
+                const actual = catTotals[cat] || 0;
+                const rec = catRecurring[cat] || 0;
+                let forecastCat = 0;
+
+                if (actual > 0) {
+                    if (rec > 0) {
+                        const varPart = Math.max(0, actual - rec);
+                        forecastCat = rec + (varPart * 0.4);
+                    } else {
+                        forecastCat = actual * 0.75;
+                    }
+                }
+                catForecasts[cat] = forecastCat;
+                forecastTotal += forecastCat;
+            });
+
+            // 4. Update Header Metrics & Target Meters
+            document.getElementById('metric-forecast-total').innerText = formatCurrency(forecastTotal);
+            document.getElementById('metric-target-budget').innerText = formatCurrency(targetBudget);
+
+            // Calculate Target Percentage Used
+            const usagePercent = targetBudget > 0 ? Math.min(Math.round((forecastTotal / targetBudget) * 100), 200) : 0;
+            const targetProgressBar = document.getElementById('target-progress-bar');
+            const targetPercentText = document.getElementById('target-progress-percent');
+            const statusEl = document.getElementById('metric-target-status');
+            const healthBadge = document.getElementById('health-badge');
+
+            targetProgressBar.style.width = `${Math.min(usagePercent, 100)}%`;
+            targetPercentText.innerText = `${usagePercent}% used`;
+
+            const delta = forecastTotal - targetBudget;
+            if (delta > 0) {
+                targetProgressBar.className = "bg-gradient-to-r from-amber-500 to-rose-500 h-full rounded-full transition-all duration-500";
+                targetPercentText.className = "text-sm font-extrabold text-rose-400";
+                statusEl.className = "text-xs font-bold mt-1 text-rose-400 flex items-center gap-1";
+                statusEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> Over budget by ${formatCurrency(delta)}`;
+                
+                healthBadge.className = "px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/10 text-rose-400 border border-rose-500/20";
+                healthBadge.innerText = "Over Budget";
+            } else {
+                targetProgressBar.className = "bg-gradient-to-r from-brand-500 to-emerald-400 h-full rounded-full transition-all duration-500";
+                targetPercentText.className = "text-sm font-extrabold text-brand-400";
+                statusEl.className = "text-xs font-bold mt-1 text-emerald-400 flex items-center gap-1";
+                statusEl.innerHTML = `<i class="fa-solid fa-circle-check"></i> ${formatCurrency(Math.abs(delta))} under budget limit`;
+                
+                healthBadge.className = "px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20";
+                healthBadge.innerText = "On Track";
+            }
+
+            // 5. Render Lists & Table
+            renderCategoryBars('spending-category-list', catTotals, totalSpent);
+            renderCategoryBars('forecast-category-list', catForecasts, forecastTotal);
+            renderRecurringCharges();
+            renderTransactionsTable();
+
+            // 6. Update Charts
+            renderCharts(catTotals, catForecasts);
+
+            // 7. Savings Insights
+            renderSavingsAdvice(catTotals, forecastTotal);
+        }
+
+        // Render Progress Bars for Categories
+        function renderCategoryBars(elemId, dataObj, grandTotal) {
+            const container = document.getElementById(elemId);
+            container.innerHTML = '';
+
+            const items = Object.entries(dataObj)
+                .filter(([_, amount]) => amount > 0)
+                .sort((a, b) => b[1] - a[1]);
+
+            if (items.length === 0) {
+                container.innerHTML = `<p class="text-xs text-slate-500 italic py-2">No records found.</p>`;
+                return;
+            }
+
+            items.forEach(([category, amount]) => {
+                const percent = grandTotal > 0 ? Math.round((amount / grandTotal) * 100) : 0;
+                const conf = categoryConfig[category] || categoryConfig['Other'];
+
+                const html = `
+                    <div>
+                        <div class="flex justify-between text-xs mb-1">
+                            <span class="font-medium text-slate-300 flex items-center gap-1.5">
+                                <span class="w-2 h-2 rounded-full ${conf.bg}"></span>
+                                ${category}
+                            </span>
+                            <span class="font-bold text-white">${formatCurrency(amount)} <span class="text-slate-500 text-[10px]">(${percent}%)</span></span>
+                        </div>
+                        <div class="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden border border-slate-800">
+                            <div class="${conf.bg} h-1.5 rounded-full transition-all duration-500" style="width: ${percent}%"></div>
+                        </div>
+                    </div>
+                `;
+                container.insertAdjacentHTML('beforeend', html);
+            });
+        }
+
+        // Render Recurring Items List
+        function renderRecurringCharges() {
+            const container = document.getElementById('recurring-charges-list');
+            container.innerHTML = '';
+
+            const recurring = transactions.filter(t => t.isRecurring);
+            const map = new Map();
+            recurring.forEach(r => { if (!map.has(r.description)) map.set(r.description, r); });
+
+            if (map.size === 0) {
+                container.innerHTML = `<p class="text-xs text-slate-500 italic py-2">No recurring bills marked.</p>`;
+                return;
+            }
+
+            map.forEach(item => {
+                const conf = categoryConfig[item.category] || categoryConfig['Other'];
+                const html = `
+                    <div class="flex items-center justify-between p-2 rounded-xl bg-slate-950/60 border border-slate-800 text-xs">
+                        <div class="flex items-center gap-2 overflow-hidden">
+                            <span class="px-2 py-0.5 rounded text-[10px] font-bold ${conf.badge} shrink-0">
+                                ${item.category}
+                            </span>
+                            <span class="font-medium text-slate-200 truncate">${item.description}</span>
+                        </div>
+                        <span class="font-bold text-white shrink-0">~${formatCurrency(item.amount)}</span>
+                    </div>
+                `;
+                container.insertAdjacentHTML('beforeend', html);
+            });
+        }
+
+        // Render Table with Delete Action
+        function renderTransactionsTable() {
+            const tbody = document.getElementById('transactions-table-body');
+            const emptyState = document.getElementById('empty-state');
+            const badge = document.getElementById('transaction-count-badge');
+            const searchQuery = document.getElementById('table-search') ? document.getElementById('table-search').value.toLowerCase().trim() : '';
+
+            tbody.innerHTML = '';
+
+            let filtered = [...transactions];
+            if (searchQuery) {
+                filtered = filtered.filter(t => 
+                    t.description.toLowerCase().includes(searchQuery) || 
+                    t.category.toLowerCase().includes(searchQuery)
+                );
+            }
+
+            badge.innerText = `${filtered.length} Transaction${filtered.length === 1 ? '' : 's'}`;
+
+            if (filtered.length === 0) {
+                emptyState.classList.remove('hidden');
+                return;
+            } else {
+                emptyState.classList.add('hidden');
+            }
+
+            filtered.sort((a, b) => new Date(b.date) - new Date(a.date)).forEach(tx => {
+                const conf = categoryConfig[tx.category] || categoryConfig['Other'];
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-800/40 transition-colors";
+                tr.innerHTML = `
+                    <td class="py-3 px-4 font-mono text-xs text-slate-400">${tx.date}</td>
+                    <td class="py-3 px-4 font-semibold text-white">
+                        ${tx.description}
+                        ${tx.isRecurring ? '<span class="ml-1.5 text-[9px] bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 px-1.5 py-0.5 rounded font-bold">recurring</span>' : ''}
+                    </td>
+                    <td class="py-3 px-4">
+                        <span class="px-2.5 py-1 rounded-full text-xs font-bold ${conf.badge}">
+                            ${tx.category}
+                        </span>
+                    </td>
+                    <td class="py-3 px-4 text-right font-bold text-white">${formatCurrency(tx.amount)}</td>
+                    <td class="py-3 px-4 text-center">
+                        <button 
+                            onclick="deleteExpenseItem(${tx.id})" 
+                            class="text-slate-500 hover:text-rose-400 p-1.5 rounded-lg hover:bg-rose-500/10 transition-all"
+                            title="Delete Transaction"
+                        >
+                            <i class="fa-solid fa-trash-can text-xs"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Manual Submission
+        function handleManualExpenseSubmit(e) {
+            e.preventDefault();
+            const desc = document.getElementById('exp-desc').value.trim();
+            const amount = parseFloat(document.getElementById('exp-amount').value);
+            const date = document.getElementById('exp-date').value;
+            const category = document.getElementById('exp-category').value;
+            const isRecurring = document.getElementById('exp-recurring').checked;
+
+            if (!desc || isNaN(amount) || amount <= 0) return;
+
+            const newTx = {
+                id: Date.now() + Math.floor(Math.random() * 1000),
+                date: date,
+                description: desc,
+                category: category,
+                amount: amount,
+                isRecurring: isRecurring
+            };
+
+            transactions.push(newTx);
+            saveState();
+            updateDashboard();
+
+            // Clear inputs
+            document.getElementById('exp-desc').value = '';
+            document.getElementById('exp-amount').value = '';
+            document.getElementById('exp-recurring').checked = false;
+
+            showNotification("Expense added successfully!");
+            addAgentMessage(`Logged **${desc}** (${formatCurrency(amount)}) in **${category}**.`);
+        }
+
+        function showNotification(msg) {
+            const notif = document.getElementById('form-notification');
+            document.getElementById('notification-text').innerText = msg;
+            notif.classList.remove('hidden');
+            setTimeout(() => { notif.classList.add('hidden'); }, 3000);
+        }
+
+        // Chart Rendering
+        function renderCharts(catTotals, catForecasts) {
+            const labels = Object.keys(categoryConfig);
+            const actualValues = labels.map(c => catTotals[c] || 0);
+            const forecastValues = labels.map(c => catForecasts[c] || 0);
+
+            // Bar Chart
+            const ctxBar = document.getElementById('categoryChart').getContext('2d');
+            if (barChartInstance) barChartInstance.destroy();
+
+            barChartInstance = new Chart(ctxBar, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Spent ($)',
+                            data: actualValues,
+                            backgroundColor: 'rgba(34, 197, 94, 0.7)',
+                            borderColor: '#22c55e',
+                            borderWidth: 1,
+                            borderRadius: 6
+                        },
+                        {
+                            label: 'Forecast ($)',
+                            data: forecastValues,
+                            backgroundColor: 'rgba(168, 85, 247, 0.4)',
+                            borderColor: '#a855f7',
+                            borderWidth: 1,
+                            borderRadius: 6
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { labels: { color: '#94a3b8', font: { family: 'Plus Jakarta Sans', size: 11 } } }
+                    },
+                    scales: {
+                        x: { ticks: { color: '#64748b', font: { size: 10 } }, grid: { color: 'rgba(51, 65, 85, 0.3)' } },
+                        y: { ticks: { color: '#64748b', font: { size: 10 } }, grid: { color: 'rgba(51, 65, 85, 0.3)' } }
+                    }
+                }
+            });
+
+            // Donut Chart
+            const ctxDonut = document.getElementById('donutChart').getContext('2d');
+            if (donutChartInstance) donutChartInstance.destroy();
+
+            const activeLabels = labels.filter((_, i) => actualValues[i] > 0);
+            const activeData = actualValues.filter(v => v > 0);
+            const activeColors = activeLabels.map(c => categoryConfig[c].hex);
+
+            donutChartInstance = new Chart(ctxDonut, {
+                type: 'doughnut',
+                data: {
+                    labels: activeLabels.length ? activeLabels : ['No Expenses'],
+                    datasets: [{
+                        data: activeData.length ? activeData : [1],
+                        backgroundColor: activeColors.length ? activeColors : ['#334155'],
+                        borderWidth: 2,
+                        borderColor: '#0f172a'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    cutout: '70%'
+                }
+            });
+        }
+
+        // Render Savings Insights
+        function renderSavingsAdvice(catTotals, forecastTotal) {
+            const tipEl = document.getElementById('savings-insight-text');
+            if (transactions.length === 0) {
+                tipEl.innerText = "Add expenses to generate dynamic savings insights.";
+                return;
+            }
+
+            const diff = forecastTotal - targetBudget;
+            const dining = catTotals['Dining & Food'] || 0;
+            const subs = catTotals['Subscriptions'] || 0;
+
+            if (diff > 0) {
+                tipEl.innerHTML = `Predicted expenditure (<strong>${formatCurrency(forecastTotal)}</strong>) exceeds target limit by <strong>${formatCurrency(diff)}</strong>. Try cutting down dining (${formatCurrency(dining)}).`;
+            } else if (subs > 40) {
+                tipEl.innerHTML = `Subscriptions total <strong>${formatCurrency(subs)}</strong>/mo. Canceling 1 unused streaming plan could save ~$15/mo.`;
+            } else {
+                tipEl.innerHTML = `Great job! Your spending projection is <strong>${formatCurrency(Math.abs(diff))}</strong> below your set target.`;
+            }
+        }
+
+        // AI Agent Interface Logic
+        function addAgentMessage(text) {
+            const chatBox = document.getElementById('chat-messages');
+            const html = `
+                <div class="flex items-start gap-2.5 max-w-[90%]">
+                    <div class="w-7 h-7 rounded-lg bg-gradient-to-tr from-brand-600 to-emerald-400 text-white flex items-center justify-center text-xs shrink-0 mt-0.5 shadow-md">
+                        <i class="fa-solid fa-robot"></i>
+                    </div>
+                    <div class="bg-slate-900 border border-slate-800 p-3 rounded-2xl rounded-tl-none text-xs text-slate-200 leading-relaxed shadow-sm">
+                        ${formatMarkdown(text)}
+                    </div>
+                </div>
+            `;
+            chatBox.insertAdjacentHTML('beforeend', html);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        function addUserMessage(text) {
+            const chatBox = document.getElementById('chat-messages');
+            const html = `
+                <div class="flex items-start gap-2.5 max-w-[90%] ml-auto justify-end">
+                    <div class="bg-brand-600 p-3 rounded-2xl rounded-tr-none text-xs text-white leading-relaxed shadow-md font-medium">
+                        ${text}
+                    </div>
+                    <div class="w-7 h-7 rounded-lg bg-slate-800 text-slate-300 flex items-center justify-center text-xs shrink-0 mt-0.5 border border-slate-700">
+                        <i class="fa-solid fa-user"></i>
+                    </div>
+                </div>
+            `;
+            chatBox.insertAdjacentHTML('beforeend', html);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        function formatMarkdown(str) {
+            return str
+                .replace(/\*\*(.*?)\*\*/g, '<strong class="text-white font-bold">$1</strong>')
+                .replace(/\*(.*?)\*/g, '<em class="text-slate-300">$1</em>')
+                .replace(/\n/g, '<br>');
+        }
+
+        function resetChatMessages() {
+            document.getElementById('chat-messages').innerHTML = '';
+            addAgentMessage("Chat restarted! Ask me anything about your budget.");
+        }
+
+        function handleChatSubmit(e) {
+            e.preventDefault();
+            const input = document.getElementById('chat-input');
+            const query = input.value.trim();
+            if (!query) return;
+
+            addUserMessage(query);
+            input.value = '';
+
+            setTimeout(() => { processAgentQuery(query); }, 200);
+        }
+
+        function handleQuickAction(action) {
+            if (action === 'save') {
+                addUserMessage("Where can I save?");
+                processAgentQuery("Where can I save?");
+            } else if (action === 'forecast') {
+                addUserMessage("Forecast next month");
+                processAgentQuery("Forecast next month");
+            } else if (action === 'swiggy') {
+                addUserMessage("Add 450 Swiggy dinner");
+                processAgentQuery("Add 450 Swiggy dinner");
+            } else if (action === 'sample') {
+                addUserMessage("Load sample data");
+                loadSampleData();
+            }
+        }
+
+        // Agent Intent Parser
+        function processAgentQuery(query) {
+            const q = query.toLowerCase();
+
+            // Intent 1: Savings Recommendations
+            if (q.includes('save') || q.includes('saving') || q.includes('cut') || q.includes('tip')) {
+                const rent = transactions.filter(t => t.category === 'Rent/Housing').reduce((a, b) => a + b.amount, 0);
+                const groceries = transactions.filter(t => t.category === 'Groceries').reduce((a, b) => a + b.amount, 0);
+                const dining = transactions.filter(t => t.category === 'Dining & Food').reduce((a, b) => a + b.amount, 0);
+
+                let reply = `Based on your budget target of **${formatCurrency(targetBudget)}**:\n\n`;
+                if (dining > 0) reply += `• **Dining (${formatCurrency(dining)})**: Ordering out less could save ~$40/week.\n`;
+                if (groceries > 0) reply += `• **Groceries (${formatCurrency(groceries)})**: Buy in bulk to reduce quick-commerce charges.\n`;
+                if (rent > 0) reply += `• **Rent (${formatCurrency(rent)})**: Fixed expense. Review at renewal time.\n`;
+
+                addAgentMessage(reply);
+                return;
+            }
+
+            // Intent 2: Forecast
+            if (q.includes('forecast') || q.includes('predict') || q.includes('next month')) {
+                const forecastVal = parseFloat(document.getElementById('metric-forecast-total').innerText.replace(/[^0-9.-]+/g,""));
+                const delta = forecastVal - targetBudget;
+
+                let reply = `Your projected expenditure for next month is **${formatCurrency(forecastVal)}** against a target of **${formatCurrency(targetBudget)}**.\n\n`;
+                if (delta > 0) {
+                    reply += `You are projected **${formatCurrency(delta)} over limit**. Consider trimming non-essential dining or subscriptions.`;
+                } else {
+                    reply += `You are **${formatCurrency(Math.abs(delta))} under budget**. Excellent spending control!`;
+                }
+                addAgentMessage(reply);
+                return;
+            }
+
+            // Intent 3: Natural Language Expense Logging
+            const amountMatch = q.match(/(\$?\d+(\.\d+)?)/);
+            if (amountMatch) {
+                const val = parseFloat(amountMatch[0].replace('$', ''));
+                let category = 'Other';
+                let desc = 'Expense Entry';
+
+                if (q.includes('rent')) { category = 'Rent/Housing'; desc = 'Apartment Rent'; }
+                else if (q.includes('swiggy') || q.includes('dinner') || q.includes('food') || q.includes('coffee')) { category = 'Dining & Food'; desc = 'Dining / Swiggy'; }
+                else if (q.includes('grocery') || q.includes('groceries')) { category = 'Groceries'; desc = 'Groceries'; }
+                else if (q.includes('uber') || q.includes('cab') || q.includes('fuel')) { category = 'Transport'; desc = 'Transport'; }
+                else if (q.includes('netflix') || q.includes('spotify') || q.includes('subscription')) { category = 'Subscriptions'; desc = 'Subscription'; }
+
+                const newTx = {
+                    id: Date.now(),
+                    date: new Date().toISOString().split('T')[0],
+                    description: desc,
+                    category: category,
+                    amount: val,
+                    isRecurring: false
+                };
+
+                transactions.push(newTx);
+                saveState();
+                updateDashboard();
+
+                addAgentMessage(`Added **${desc}** (${formatCurrency(val)}) under **${category}**.`);
+                return;
+            }
+
+            // Fallback Agent Answer
+            addAgentMessage(`I didn't quite catch that. You can tell me *"I paid 1200 for rent today"*, ask *"Forecast next month"*, or click shortcut commands!`);
+        }
+    </script>
+</body>
+</html>
